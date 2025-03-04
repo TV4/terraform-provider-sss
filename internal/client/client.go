@@ -2,14 +2,11 @@ package client
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
-
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type SssClient struct {
@@ -34,7 +31,6 @@ func NewSssClient(host string, protocol string, authUsername string, authPasswor
 }
 
 func (client *SssClient) getOrDeleteEcsService(serviceName string, method string) (*EcsServiceResponse, error) {
-	tflog.Info(context.Background(), fmt.Sprintf("createOrDestroyEcsService %s %s", method, serviceName))
 	url := url.URL{
 		Scheme: client.protocol,
 		Host:   client.host,
@@ -51,18 +47,25 @@ func (client *SssClient) getOrDeleteEcsService(serviceName string, method string
 		return nil, err
 	}
 	defer response.Body.Close()
+	if method == "DELETE" {
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to delete service %s: %s", serviceName, response.Status)
+		}
+		return nil, nil
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get service %s: %s", serviceName, response.Status)
+	}
 	// Parse the response body into a EcsServiceResponse struct.
 	var ecsServiceResponse EcsServiceResponse
 	err = json.NewDecoder(response.Body).Decode(&ecsServiceResponse)
-	tflog.Info(context.Background(), fmt.Sprintf("ecsServiceResponse: %v", ecsServiceResponse))
 	if err != nil {
 		return nil, err
 	}
 	return &ecsServiceResponse, nil
 }
 
-func (client *SssClient) editEcsService(serviceName string, capacities EcsServicePostBody, method string) (*EcsServiceResponse, error) {
-	tflog.Info(context.Background(), fmt.Sprintf("editEcsService %s %s: %v", method, serviceName, capacities))
+func (client *SssClient) editEcsService(serviceName string, capacities EcsServicePostBody, method string) error {
 	url := url.URL{
 		Scheme: client.protocol,
 		Host:   client.host,
@@ -71,39 +74,38 @@ func (client *SssClient) editEcsService(serviceName string, capacities EcsServic
 
 	body, err := json.Marshal(capacities)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req, err := http.NewRequest(method, url.String(), bytes.NewBuffer(body))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.SetBasicAuth(client.authUsername, client.authPassword)
 	req.Header.Set("Accept", "application/json, application/problem+json")
 	req.Header.Set("Content-Type", "application/json")
 	response, err := client.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer response.Body.Close()
-	// Parse the response body into a EcsServiceResponse struct.
-	var ecsServiceResponse EcsServiceResponse
-	err = json.NewDecoder(response.Body).Decode(&ecsServiceResponse)
-	if err != nil {
-		return nil, err
+	if method == "POST" && response.StatusCode != http.StatusCreated {
+		return fmt.Errorf("failed to create service %s: %s", serviceName, response.Status)
 	}
-	tflog.Info(context.Background(), fmt.Sprintf("ecsServiceResponse: %v", ecsServiceResponse))
-	return &ecsServiceResponse, nil
+	if method == "PUT" && response.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to update service %s: %s", serviceName, response.Status)
+	}
+	return nil
 }
 
 func (client *SssClient) GetEcsService(serviceName string) (*EcsServiceResponse, error) {
 	return client.getOrDeleteEcsService(serviceName, "GET")
 }
 
-func (client *SssClient) CreateEcsService(serviceName string, capacities EcsServicePostBody) (*EcsServiceResponse, error) {
+func (client *SssClient) CreateEcsService(serviceName string, capacities EcsServicePostBody) error {
 	return client.editEcsService(serviceName, capacities, "POST")
 }
 
-func (client *SssClient) UpdateEcsService(serviceName string, capacities EcsServicePostBody) (*EcsServiceResponse, error) {
+func (client *SssClient) UpdateEcsService(serviceName string, capacities EcsServicePostBody) error {
 	return client.editEcsService(serviceName, capacities, "PUT")
 }
 

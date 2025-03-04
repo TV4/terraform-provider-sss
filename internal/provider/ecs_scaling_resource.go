@@ -118,15 +118,12 @@ func (r *ecsScalingResource) Create(ctx context.Context, req resource.CreateRequ
 
 	serviceName, capacities := plan.ToClientModel()
 
-	response, err := r.client.CreateEcsService(serviceName, capacities)
+	err := r.client.CreateEcsService(serviceName, capacities)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create ECS service scaling", err.Error())
 		return
 	}
-	responseModel := ToResourceModel(response)
-	// Don't overwrite service ID since it's URL encoded in the backend.
-	// Populate the other fields.
-	plan.MinTasks = responseModel.MinTasks
+
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -145,7 +142,7 @@ func (r *ecsScalingResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	response, err := r.client.GetEcsService(state.ServiceID.String())
+	response, err := r.client.GetEcsService(state.ServiceID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to read ECS service scaling", "Could not read scaling for service "+state.ServiceID.ValueString()+": "+err.Error())
 		return
@@ -170,13 +167,11 @@ func (r *ecsScalingResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	serviceName, capacities := plan.ToClientModel()
-	response, err := r.client.UpdateEcsService(serviceName, capacities)
+	err := r.client.UpdateEcsService(serviceName, capacities)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update ECS service scaling", err.Error())
 		return
 	}
-	responseModel := ToResourceModel(response)
-	plan.MinTasks = responseModel.MinTasks
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)

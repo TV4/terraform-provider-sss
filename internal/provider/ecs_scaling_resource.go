@@ -6,6 +6,7 @@ import (
 	"terraform-provider-sss/internal/client"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,14 +14,15 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &ecsScalingResource{}
-	_ resource.ResourceWithConfigure = &ecsScalingResource{}
+	_ resource.Resource                = &ecsScalingResource{}
+	_ resource.ResourceWithConfigure   = &ecsScalingResource{}
+	_ resource.ResourceWithImportState = &ecsScalingResource{}
 )
 
 type ecsScalingResourceModel struct {
-	ServiceID   types.String            `tfsdk:"service_id"`
-	MinTasks    ecsScalingCapacityModel `tfsdk:"min_tasks"`
-	LastUpdated types.String            `tfsdk:"last_updated"`
+	ServiceID   types.String             `tfsdk:"service_id"`
+	MinTasks    *ecsScalingCapacityModel `tfsdk:"min_tasks"`
+	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
 type ecsScalingCapacityModel struct {
@@ -42,7 +44,7 @@ func (m *ecsScalingResourceModel) ToClientModel() (string, client.EcsServicePost
 func ToResourceModel(m *client.EcsServiceResponse) ecsScalingResourceModel {
 	return ecsScalingResourceModel{
 		ServiceID: types.StringValue(m.Name),
-		MinTasks: ecsScalingCapacityModel{
+		MinTasks: &ecsScalingCapacityModel{
 			Min:     types.Int64Value(m.MinLowCapacity),
 			Medium:  types.Int64Value(m.MinMediumCapacity),
 			High:    types.Int64Value(m.MinHighCapacity),
@@ -148,9 +150,13 @@ func (r *ecsScalingResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	responseModel := ToResourceModel(response)
-	state.MinTasks = responseModel.MinTasks
-	diags = resp.State.Set(ctx, state)
+	newState := ToResourceModel(response)
+
+	if !state.LastUpdated.IsNull() {
+		newState.LastUpdated = state.LastUpdated
+	}
+
+	diags = resp.State.Set(ctx, &newState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -194,4 +200,8 @@ func (r *ecsScalingResource) Delete(ctx context.Context, req resource.DeleteRequ
 		resp.Diagnostics.AddError("Failed to delete ECS service scaling", err.Error())
 		return
 	}
+}
+
+func (r *ecsScalingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("service_id"), req, resp)
 }

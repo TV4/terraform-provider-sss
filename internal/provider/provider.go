@@ -5,7 +5,7 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"terraform-provider-sss/internal/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -31,7 +31,10 @@ type SssProvider struct {
 
 // SssProviderModel describes the provider data model.
 type SssProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+	Host         types.String `tfsdk:"host"`
+	AuthUsername types.String `tfsdk:"auth_username"`
+	AuthPassword types.String `tfsdk:"auth_password"`
+	Protocol     types.String `tfsdk:"protocol"`
 }
 
 func (p *SssProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -42,9 +45,22 @@ func (p *SssProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 func (p *SssProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
+			"host": schema.StringAttribute{
 				MarkdownDescription: "The Scheduled Scaling Service API endpoint to connect to.",
-				Optional:            false,
+				Required:            true,
+			},
+			"protocol": schema.StringAttribute{
+				MarkdownDescription: "The protocol to use when connecting to the Scheduled Scaling Service API.",
+				Optional:            true,
+			},
+			"auth_username": schema.StringAttribute{
+				MarkdownDescription: "The basicauth username to authenticate with.",
+				Required:            true,
+			},
+			"auth_password": schema.StringAttribute{
+				MarkdownDescription: "The basicauth password to authenticate with.",
+				Sensitive:           true,
+				Required:            true,
 			},
 		},
 	}
@@ -53,7 +69,8 @@ func (p *SssProvider) Schema(ctx context.Context, req provider.SchemaRequest, re
 func (p *SssProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data SssProviderModel
 
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -63,33 +80,30 @@ func (p *SssProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	// if data.Endpoint.IsNull() { /* ... */ }
 
 	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	client := client.NewSssClient(
+		data.Host.ValueString(),
+		data.Protocol.ValueString(), data.AuthUsername.ValueString(), data.AuthPassword.ValueString(),
+	)
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
 
 func (p *SssProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		NewEcsScalingResource,
 	}
 }
 
 func (p *SssProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{
-		NewExampleEphemeralResource,
-	}
+	return []func() ephemeral.EphemeralResource{}
 }
 
 func (p *SssProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
+	return []func() datasource.DataSource{}
 }
 
 func (p *SssProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
+	return []func() function.Function{}
 }
 
 func New(version string) func() provider.Provider {

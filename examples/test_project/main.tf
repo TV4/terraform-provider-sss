@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     sss = {
-      source = "hashicorp.com/tv4/sss"
+      source = "tv4/sss"
     }
   }
 }

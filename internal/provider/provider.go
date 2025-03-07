@@ -44,6 +44,7 @@ func (p *SssProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 
 func (p *SssProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Interact with the TV4 Media AB Scheduled Scaling Service.",
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
 				MarkdownDescription: "The Scheduled Scaling Service API endpoint to connect to.",

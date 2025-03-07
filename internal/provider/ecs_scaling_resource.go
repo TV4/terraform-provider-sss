@@ -90,15 +90,18 @@ func (r *ecsScalingResource) Metadata(_ context.Context, req resource.MetadataRe
 // Schema defines the schema for the resource.
 func (r *ecsScalingResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manages scaling for ECS services.",
 		Attributes: map[string]schema.Attribute{
 			"service_id": schema.StringAttribute{
-				Required: true,
+				Description: "The service ID. Should be in format CLUSTER_NAME/SERICE_NAME",
+				Required:    true,
 			},
 			"last_updated": schema.StringAttribute{
 				Computed: true,
 			},
 			"min_tasks": schema.SingleNestedAttribute{
-				Required: true,
+				Description: "The minimum number of tasks to have during different schedules.",
+				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"low": schema.Int64Attribute{
 						Required: true,

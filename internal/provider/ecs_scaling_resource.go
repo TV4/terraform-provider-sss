@@ -1,3 +1,6 @@
+// Copyright (c) TV4 Media AB
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (

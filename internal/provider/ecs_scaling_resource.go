@@ -24,6 +24,7 @@ var (
 
 type ecsScalingResourceModel struct {
 	ServiceID   types.String             `tfsdk:"service_id"`
+	Region      types.String             `tfsdk:"region"`
 	MinTasks    *ecsScalingCapacityModel `tfsdk:"min_tasks"`
 	LastUpdated types.String             `tfsdk:"last_updated"`
 }
@@ -41,12 +42,14 @@ func (m *ecsScalingResourceModel) ToClientModel() (string, client.EcsServicePost
 		MinMediumCapacity:  m.MinTasks.Medium.ValueInt64(),
 		MinHighCapacity:    m.MinTasks.High.ValueInt64(),
 		MinExtremeCapacity: m.MinTasks.Extreme.ValueInt64(),
+		Region:             m.Region.ValueString(),
 	}
 }
 
 func ToResourceModel(m *client.EcsServiceResponse) ecsScalingResourceModel {
 	return ecsScalingResourceModel{
 		ServiceID: types.StringValue(m.Name),
+		Region:    types.StringValue(m.Region),
 		MinTasks: &ecsScalingCapacityModel{
 			Min:     types.Int64Value(m.MinLowCapacity),
 			Medium:  types.Int64Value(m.MinMediumCapacity),
@@ -94,6 +97,10 @@ func (r *ecsScalingResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"service_id": schema.StringAttribute{
 				Description: "The service ID. Should be in format CLUSTER_NAME/SERICE_NAME",
+				Required:    true,
+			},
+			"region": schema.StringAttribute{
+				Description: "The AWS region the service is located in. E.g. eu-west-1",
 				Required:    true,
 			},
 			"last_updated": schema.StringAttribute{

@@ -30,6 +30,7 @@ resource "sss_ecs_scaling" "test" {
 ### Required
 
 - `min_tasks` (Attributes) The minimum number of tasks to have during different schedules. (see [below for nested schema](#nestedatt--min_tasks))
+- `region` (String) The AWS region the service is located in. E.g. eu-west-1
 - `service_id` (String) The service ID. Should be in format CLUSTER_NAME/SERICE_NAME
 
 ### Read-Only

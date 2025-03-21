@@ -4,10 +4,11 @@
 package client
 
 type EcsServicePostBody struct {
-	MinExtremeCapacity int64 `json:"minExtremeCapacity"`
-	MinHighCapacity    int64 `json:"minHighCapacity"`
-	MinMediumCapacity  int64 `json:"minMediumCapacity"`
-	MinLowCapacity     int64 `json:"minLowCapacity"`
+	MinExtremeCapacity int64  `json:"minExtremeCapacity"`
+	MinHighCapacity    int64  `json:"minHighCapacity"`
+	MinMediumCapacity  int64  `json:"minMediumCapacity"`
+	MinLowCapacity     int64  `json:"minLowCapacity"`
+	Region             string `json:"region"`
 }
 
 type EcsServiceResponse struct {
@@ -16,6 +17,7 @@ type EcsServiceResponse struct {
 	MinHighCapacity    int64  `json:"minHighCapacity"`
 	MinMediumCapacity  int64  `json:"minMediumCapacity"`
 	MinLowCapacity     int64  `json:"minLowCapacity"`
+	Region             string `json:"region"`
 }
 
 type ErrorDetail struct {

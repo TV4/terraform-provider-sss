@@ -33,11 +33,16 @@ func NewSssClient(host string, protocol string, authUsername string, authPasswor
 	}
 }
 
-func (client *SssClient) getOrDeleteEcsService(serviceName string, method string) (*EcsServiceResponse, error) {
+type scalableType string
+
+const scalableTypeECS scalableType = "ecs"
+const scalableTypeDynamoDB scalableType = "dynamodbtable"
+
+func getOrDeleteScalable[T any](client *SssClient, scalableType scalableType, scalableId string, method string) (*T, error) {
 	url := url.URL{
 		Scheme: client.protocol,
 		Host:   client.host,
-		Path:   path.Join("/api/v1/services/ecs", url.PathEscape(serviceName)),
+		Path:   path.Join("/api/v1/services/", string(scalableType), url.PathEscape(scalableId)),
 	}
 	req, err := http.NewRequest(method, url.String(), nil)
 	if err != nil {
@@ -52,27 +57,27 @@ func (client *SssClient) getOrDeleteEcsService(serviceName string, method string
 	defer response.Body.Close()
 	if method == "DELETE" {
 		if response.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to delete service %s: %s", serviceName, response.Status)
+			return nil, fmt.Errorf("failed to delete scalable %s/%s: %s", string(scalableType), scalableId, response.Status)
 		}
 		return nil, nil
 	}
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get service %s: %s", serviceName, response.Status)
+		return nil, fmt.Errorf("failed to get scalable %s/%s: %s", string(scalableType), scalableId, response.Status)
 	}
 	// Parse the response body into a EcsServiceResponse struct.
-	var ecsServiceResponse EcsServiceResponse
-	err = json.NewDecoder(response.Body).Decode(&ecsServiceResponse)
+	var scalableResponse T
+	err = json.NewDecoder(response.Body).Decode(&scalableResponse)
 	if err != nil {
 		return nil, err
 	}
-	return &ecsServiceResponse, nil
+	return &scalableResponse, nil
 }
 
-func (client *SssClient) editEcsService(serviceName string, capacities EcsServicePostBody, method string) error {
+func editScalable[T any](client *SssClient, scalableType scalableType, scalableId string, capacities T, method string) error {
 	url := url.URL{
 		Scheme: client.protocol,
 		Host:   client.host,
-		Path:   path.Join("/api/v1/services/ecs", url.PathEscape(serviceName)),
+		Path:   path.Join("/api/v1/services/", string(scalableType), url.PathEscape(scalableId)),
 	}
 
 	body, err := json.Marshal(capacities)
@@ -92,26 +97,10 @@ func (client *SssClient) editEcsService(serviceName string, capacities EcsServic
 	}
 	defer response.Body.Close()
 	if method == "POST" && response.StatusCode != http.StatusCreated {
-		return fmt.Errorf("failed to create service %s: %s", serviceName, response.Status)
+		return fmt.Errorf("failed to create service %s/%s: %s", scalableType, scalableId, response.Status)
 	}
 	if method == "PUT" && response.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to update service %s: %s", serviceName, response.Status)
+		return fmt.Errorf("failed to update service %s/%s: %s", scalableType, scalableId, response.Status)
 	}
 	return nil
-}
-
-func (client *SssClient) GetEcsService(serviceName string) (*EcsServiceResponse, error) {
-	return client.getOrDeleteEcsService(serviceName, "GET")
-}
-
-func (client *SssClient) CreateEcsService(serviceName string, capacities EcsServicePostBody) error {
-	return client.editEcsService(serviceName, capacities, "POST")
-}
-
-func (client *SssClient) UpdateEcsService(serviceName string, capacities EcsServicePostBody) error {
-	return client.editEcsService(serviceName, capacities, "PUT")
-}
-
-func (client *SssClient) DeleteEcsService(serviceName string) (*EcsServiceResponse, error) {
-	return client.getOrDeleteEcsService(serviceName, "DELETE")
 }

@@ -32,7 +32,7 @@ type DynamoTablePostBody struct {
 	LowCapacity     DynamoTableCapacity `json:"lowCapacity"`
 	MediumCapacity  DynamoTableCapacity `json:"mediumCapacity"`
 	HighCapacity    DynamoTableCapacity `json:"highCapacity"`
-	ExtremeCapacity DynamoTableCapacity `json:"extremecapacity"`
+	ExtremeCapacity DynamoTableCapacity `json:"extremeCapacity"`
 }
 
 type DynamoTableResponse struct {

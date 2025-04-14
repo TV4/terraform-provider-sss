@@ -41,3 +41,35 @@ resource "sss_ecs_scaling" "test" {
     extreme = 6
   }
 }
+
+resource "sss_dynamo_table_scaling" "table_test_entry" {
+  table_name = "table/a2dcmsapi-mtvsync-entrytable"
+  region     = "eu-west-1"
+  capacity   = {
+    low      = {
+      min_write = 1
+      max_write = 1
+      min_read  = 1
+      max_read  = 1
+    }
+
+    medium      = {
+      min_write = 1
+      max_write = 1
+      min_read  = 1
+      max_read  = 1
+    }
+    high    = {
+      min_write = 1
+      max_write = 1
+      min_read  = 1
+      max_read  = 1
+    }
+    extreme = {
+      min_write = 1
+      max_write = 2
+      min_read  = 1
+      max_read  = 1
+    }
+  }
+}

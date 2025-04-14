@@ -23,10 +23,10 @@ var (
 )
 
 type dynamoTableCapacityValue struct {
-	MinWriteCapacity types.Int64 `tfsdk:"min_write_capacity"`
-	MinReadCapacity  types.Int64 `tfsdk:"min_read_capacity"`
-	MaxWriteCapacity types.Int64 `tfsdk:"max_write_capacity"`
-	MaxReadCapacity  types.Int64 `tfsdk:"max_read_capacity"`
+	MinWriteCapacity types.Int64 `tfsdk:"min_write"`
+	MinReadCapacity  types.Int64 `tfsdk:"min_read"`
+	MaxWriteCapacity types.Int64 `tfsdk:"max_write"`
+	MaxReadCapacity  types.Int64 `tfsdk:"max_read"`
 }
 
 type dynamoTableCapacityModel struct {
@@ -143,10 +143,10 @@ func (r *dynamoTableScalingResource) Schema(_ context.Context, _ resource.Schema
 		Description: "The capacity to use during the different schedules.",
 		Required:    true,
 		Attributes: map[string]schema.Attribute{
-			"min_write_capacity": schema.Int64Attribute{Required: true},
-			"max_write_capacity": schema.Int64Attribute{Required: true},
-			"min_read_capacity":  schema.Int64Attribute{Required: true},
-			"max_read_capacity":  schema.Int64Attribute{Required: true},
+			"min_write": schema.Int64Attribute{Required: true},
+			"max_write": schema.Int64Attribute{Required: true},
+			"min_read":  schema.Int64Attribute{Required: true},
+			"max_read":  schema.Int64Attribute{Required: true},
 		},
 	}
 
@@ -168,10 +168,10 @@ func (r *dynamoTableScalingResource) Schema(_ context.Context, _ resource.Schema
 				Description: "The minimum number of tasks to have during different schedules.",
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
-					"low_capacity":     capacitySchema,
-					"medium_capacity":  capacitySchema,
-					"high_capacity":    capacitySchema,
-					"extreme_capacity": capacitySchema,
+					"low":     capacitySchema,
+					"medium":  capacitySchema,
+					"high":    capacitySchema,
+					"extreme": capacitySchema,
 				},
 			},
 		},

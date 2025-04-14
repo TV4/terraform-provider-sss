@@ -37,14 +37,14 @@ type dynamoTableCapacityModel struct {
 }
 
 type dynamoTableScalingResourceModel struct {
-	TableArn    types.String             `tfsdk:"table_arn"`
+	TableName   types.String             `tfsdk:"table_name"`
 	Region      types.String             `tfsdk:"region"`
 	Capacity    dynamoTableCapacityModel `tfsdk:"capacity"`
 	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
 func (m *dynamoTableScalingResourceModel) ToClientModel() (string, client.DynamoTablePostBody) {
-	return m.TableArn.ValueString(), client.DynamoTablePostBody{
+	return m.TableName.ValueString(), client.DynamoTablePostBody{
 		Region: m.Region.ValueString(),
 		LowCapacity: client.DynamoTableCapacity{
 			MinWriteCapacity: m.Capacity.Min.MinWriteCapacity.ValueInt64(),
@@ -75,8 +75,8 @@ func (m *dynamoTableScalingResourceModel) ToClientModel() (string, client.Dynamo
 
 func ToDynamoTableResourceModel(m *client.DynamoTableResponse) dynamoTableScalingResourceModel {
 	return dynamoTableScalingResourceModel{
-		TableArn: types.StringValue(m.TableArn),
-		Region:   types.StringValue(m.Region),
+		TableName: types.StringValue(m.TableName),
+		Region:    types.StringValue(m.Region),
 		Capacity: dynamoTableCapacityModel{
 			Min: dynamoTableCapacityValue{
 				MinWriteCapacity: types.Int64Value(m.LowCapacity.MinWriteCapacity),
@@ -153,7 +153,7 @@ func (r *dynamoTableScalingResource) Schema(_ context.Context, _ resource.Schema
 	resp.Schema = schema.Schema{
 		Description: "Manages scaling for DynamoDB Tables.",
 		Attributes: map[string]schema.Attribute{
-			"table_arn": schema.StringAttribute{
+			"table_name": schema.StringAttribute{
 				Description: "The arn of the table",
 				Required:    true,
 			},
@@ -187,9 +187,9 @@ func (r *dynamoTableScalingResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	tableArn, capacities := plan.ToClientModel()
+	tableName, capacities := plan.ToClientModel()
 
-	err := r.client.CreateDynamoTable(tableArn, capacities)
+	err := r.client.CreateDynamoTable(tableName, capacities)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create dynamo table scaling", err.Error())
 		return
@@ -213,9 +213,9 @@ func (r *dynamoTableScalingResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	response, err := r.client.GetDynamoTable(state.TableArn.ValueString())
+	response, err := r.client.GetDynamoTable(state.TableName.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Failed to read Dynamo DB table scaling", "Could not read scaling for table "+state.TableArn.ValueString()+": "+err.Error())
+		resp.Diagnostics.AddError("Failed to read Dynamo DB table scaling", "Could not read scaling for table "+state.TableName.ValueString()+": "+err.Error())
 		return
 	}
 
@@ -241,8 +241,8 @@ func (r *dynamoTableScalingResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	tableArn, capacities := plan.ToClientModel()
-	err := r.client.UpdateDynamoTable(tableArn, capacities)
+	tableName, capacities := plan.ToClientModel()
+	err := r.client.UpdateDynamoTable(tableName, capacities)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update dynamo table scaling", err.Error())
 		return
@@ -264,7 +264,7 @@ func (r *dynamoTableScalingResource) Delete(ctx context.Context, req resource.De
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	_, err := r.client.DeleteDynamoTable(state.TableArn.ValueString())
+	_, err := r.client.DeleteDynamoTable(state.TableName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to dynamodb table scaling", err.Error())
 		return
@@ -272,5 +272,5 @@ func (r *dynamoTableScalingResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *dynamoTableScalingResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("table_arn"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("table_name"), req, resp)
 }

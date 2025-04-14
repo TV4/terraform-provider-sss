@@ -36,7 +36,7 @@ type DynamoTablePostBody struct {
 }
 
 type DynamoTableResponse struct {
-	TableArn        string              `json:"tableArn"`
+	TableName       string              `json:"tableName"`
 	Region          string              `json:"region"`
 	LowCapacity     DynamoTableCapacity `json:"lowCapacity"`
 	MediumCapacity  DynamoTableCapacity `json:"mediumCapacity"`

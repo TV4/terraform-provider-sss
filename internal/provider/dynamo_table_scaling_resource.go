@@ -106,7 +106,7 @@ func ToDynamoTableResourceModel(m *client.DynamoTableResponse) dynamoTableScalin
 	}
 }
 
-// NewcsScalingResource is a helper function to simplify the provider implementation.
+// NewDynamoTableScalingResource is a helper function to simplify the provider implementation.
 func NewDynamoTableScalingResource() resource.Resource {
 	return &dynamoTableScalingResource{}
 }

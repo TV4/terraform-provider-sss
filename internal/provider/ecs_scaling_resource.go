@@ -46,7 +46,7 @@ func (m *ecsScalingResourceModel) ToClientModel() (string, client.EcsServicePost
 	}
 }
 
-func ToResourceModel(m *client.EcsServiceResponse) ecsScalingResourceModel {
+func ToECSResourceModel(m *client.EcsServiceResponse) ecsScalingResourceModel {
 	return ecsScalingResourceModel{
 		ServiceID: types.StringValue(m.Name),
 		Region:    types.StringValue(m.Region),
@@ -163,7 +163,7 @@ func (r *ecsScalingResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	newState := ToResourceModel(response)
+	newState := ToECSResourceModel(response)
 
 	if !state.LastUpdated.IsNull() {
 		newState.LastUpdated = state.LastUpdated

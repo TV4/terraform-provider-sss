@@ -20,6 +20,30 @@ type EcsServiceResponse struct {
 	Region             string `json:"region"`
 }
 
+type DynamoTableCapacity struct {
+	MinWriteCapacity int64 `json:"minWriteCapacity"`
+	MinReadCapacity  int64 `json:"minReadCapacity"`
+	MaxWriteCapacity int64 `json:"maxWriteCapacity"`
+	MaxReadCapacity  int64 `json:"maxReadCapacity"`
+}
+
+type DynamoTablePostBody struct {
+	Region          string              `json:"region"`
+	LowCapacity     DynamoTableCapacity `json:"lowCapacity"`
+	MediumCapacity  DynamoTableCapacity `json:"mediumCapacity"`
+	HighCapacity    DynamoTableCapacity `json:"highCapacity"`
+	ExtremeCapacity DynamoTableCapacity `json:"extremeCapacity"`
+}
+
+type DynamoTableResponse struct {
+	TableName       string              `json:"tableName"`
+	Region          string              `json:"region"`
+	LowCapacity     DynamoTableCapacity `json:"lowCapacity"`
+	MediumCapacity  DynamoTableCapacity `json:"mediumCapacity"`
+	HighCapacity    DynamoTableCapacity `json:"highCapacity"`
+	ExtremeCapacity DynamoTableCapacity `json:"extremeCapacity"`
+}
+
 type ErrorDetail struct {
 	Location string `json:"location"`
 	Message  string `json:"message"`

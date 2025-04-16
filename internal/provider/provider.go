@@ -92,6 +92,7 @@ func (p *SssProvider) Configure(ctx context.Context, req provider.ConfigureReque
 func (p *SssProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewEcsScalingResource,
+		NewDynamoTableScalingResource,
 	}
 }
 

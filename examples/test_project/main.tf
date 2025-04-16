@@ -45,21 +45,21 @@ resource "sss_ecs_scaling" "test" {
 resource "sss_dynamo_table_scaling" "table_test_entry" {
   table_name = "table/a2dcmsapi-mtvsync-entrytable"
   region     = "eu-west-1"
-  capacity   = {
-    low      = {
+  capacity = {
+    low = {
       min_write = 1
       max_write = 1
       min_read  = 1
       max_read  = 1
     }
 
-    medium      = {
+    medium = {
       min_write = 1
       max_write = 1
       min_read  = 1
       max_read  = 1
     }
-    high    = {
+    high = {
       min_write = 1
       max_write = 1
       min_read  = 1

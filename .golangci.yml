@@ -13,8 +13,6 @@ linters:
     - copyloopvar
     - forcetypeassert
     - godot
-    - gofmt
-    - gosimple
     - ineffassign
     - makezero
     - misspell

@@ -54,7 +54,7 @@ func getOrDeleteScalable[T any](client *SssClient, scalableType scalableType, sc
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if method == "DELETE" {
 		if response.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("failed to delete scalable %s/%s: %s", string(scalableType), scalableId, response.Status)
@@ -95,7 +95,7 @@ func editScalable[T any](client *SssClient, scalableType scalableType, scalableI
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if method == "POST" && response.StatusCode != http.StatusCreated {
 		return fmt.Errorf("failed to create service %s/%s: %s", scalableType, scalableId, response.Status)
 	}

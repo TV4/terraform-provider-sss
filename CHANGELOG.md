@@ -1,3 +1,9 @@
+## 1.2.2
+
+SECURITY UPDATES:
+- Update google.golang.org/grpc from 1.76.0 to 1.79.3
+- Update github.com/cloudflare/circl from 1.6.1 to 1.6.3
+
 ## 1.2.0
 
 FEATURES:

@@ -1,3 +1,8 @@
+## 1.2.3
+
+SECURITY UPDATES:
+- Update golang.org/x/crypto from 0.43.0 to 0.45.0
+
 ## 1.2.2
 
 SECURITY UPDATES:

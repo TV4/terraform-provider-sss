@@ -23,14 +23,14 @@ var (
 )
 
 type eksHpaScalingResourceModel struct {
-	ServiceID   types.String                `tfsdk:"service_id"`
-	Cluster     types.String                `tfsdk:"cluster"`
-	Region      types.String                `tfsdk:"region"`
-	Namespace   types.String                `tfsdk:"namespace"`
-	Name        types.String                `tfsdk:"name"`
-	Kind        types.String                `tfsdk:"kind"`
-	MinReplicas *eksHpaMinReplicasModel     `tfsdk:"min_replicas"`
-	LastUpdated types.String                `tfsdk:"last_updated"`
+	ServiceID   types.String            `tfsdk:"service_id"`
+	Cluster     types.String            `tfsdk:"cluster"`
+	Region      types.String            `tfsdk:"region"`
+	Namespace   types.String            `tfsdk:"namespace"`
+	Name        types.String            `tfsdk:"name"`
+	Kind        types.String            `tfsdk:"kind"`
+	MinReplicas *eksHpaMinReplicasModel `tfsdk:"min_replicas"`
+	LastUpdated types.String            `tfsdk:"last_updated"`
 }
 
 type eksHpaMinReplicasModel struct {

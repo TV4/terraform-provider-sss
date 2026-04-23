@@ -37,6 +37,7 @@ type scalableType string
 
 const scalableTypeECS scalableType = "ecs"
 const scalableTypeDynamoDB scalableType = "dynamodbtable"
+const scalableTypeEKSHPA scalableType = "eks-hpa"
 
 func getOrDeleteScalable[T any](client *SssClient, scalableType scalableType, scalableId string, method string) (*T, error) {
 	url := url.URL{

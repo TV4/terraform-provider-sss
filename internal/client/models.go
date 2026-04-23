@@ -44,6 +44,31 @@ type DynamoTableResponse struct {
 	ExtremeCapacity DynamoTableCapacity `json:"extremeCapacity"`
 }
 
+type EksHpaPostBody struct {
+	Cluster    string `json:"cluster"`
+	Region     string `json:"region"`
+	Namespace  string `json:"namespace"`
+	Name       string `json:"name"`
+	Kind       string `json:"kind"`
+	MinLow     int64  `json:"minLow"`
+	MinMedium  int64  `json:"minMedium"`
+	MinHigh    int64  `json:"minHigh"`
+	MinExtreme int64  `json:"minExtreme"`
+}
+
+type EksHpaResponse struct {
+	ID         string `json:"id"`
+	Cluster    string `json:"cluster"`
+	Region     string `json:"region"`
+	Namespace  string `json:"namespace"`
+	Name       string `json:"name"`
+	Kind       string `json:"kind"`
+	MinLow     int64  `json:"minLow"`
+	MinMedium  int64  `json:"minMedium"`
+	MinHigh    int64  `json:"minHigh"`
+	MinExtreme int64  `json:"minExtreme"`
+}
+
 type ErrorDetail struct {
 	Location string `json:"location"`
 	Message  string `json:"message"`

@@ -1,0 +1,13 @@
+name: 🔍 Notify external PR author
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  notify:
+    uses: tv4/actions/.github/workflows/notify-external-pr-author.yml@main
+    with:
+      team: core-engineering-platform
+      channel: C091B99UXJA #engineering-platform-internal
+    secrets: inherit

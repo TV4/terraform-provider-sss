@@ -23,46 +23,93 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestValkeyAndAuroraModelMappings(t *testing.T) {
-	testCases := []struct {
-		name string
-		got  any
-		want any
-	}{
-		{
-			name: "valkey replicas",
-			got: ToValkeyReplicaScalingResourceModel(&client.ValkeyReplicaScalingResponse{
-				ServiceID: "replication-group", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, ReplicaCountLow: 0, ReplicaCountMedium: 1, ReplicaCountHigh: 2, ReplicaCountExtreme: 3,
-			}).ToClientModelBody(),
-			want: client.ValkeyReplicaScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, ReplicaCountLow: 0, ReplicaCountMedium: 1, ReplicaCountHigh: 2, ReplicaCountExtreme: 3},
-		},
-		{
-			name: "valkey shards",
-			got: ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{
-				ServiceID: "replication-group", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4,
-			}).ToClientModelBody(),
-			want: client.ValkeyShardScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4},
-		},
-		{
-			name: "aurora readers",
-			got: ToAuroraReaderScalingResourceModel(&client.AuroraReaderScalingResponse{
-				ServiceID: "cluster", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
-				LowCapacity: client.AuroraReaderCapacity{MinReaders: 1, MaxReaders: 2}, MediumCapacity: client.AuroraReaderCapacity{MinReaders: 2, MaxReaders: 3}, HighCapacity: client.AuroraReaderCapacity{MinReaders: 3, MaxReaders: 4}, ExtremeCapacity: client.AuroraReaderCapacity{MinReaders: 4, MaxReaders: 5},
-			}).ToClientModelBody(),
-			want: client.AuroraReaderScalingPostBody{
-				Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
-				LowCapacity: client.AuroraReaderCapacity{MinReaders: 1, MaxReaders: 2}, MediumCapacity: client.AuroraReaderCapacity{MinReaders: 2, MaxReaders: 3}, HighCapacity: client.AuroraReaderCapacity{MinReaders: 3, MaxReaders: 4}, ExtremeCapacity: client.AuroraReaderCapacity{MinReaders: 4, MaxReaders: 5},
-			},
-		},
-	}
+func TestValkeyAndAuroraToClientModelMappings(t *testing.T) {
+	t.Run("valkey replicas", func(t *testing.T) {
+		model := valkeyReplicaScalingResourceModel{
+			ServiceID: types.StringValue("replication-group"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
+			ReplicaCount: &valkeyReplicaCountModel{Low: types.Int64Value(0), Medium: types.Int64Value(1), High: types.Int64Value(2), Extreme: types.Int64Value(3)},
+		}
+		serviceID, got := model.ToClientModel()
+		want := client.ValkeyReplicaScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, ReplicaCountLow: 0, ReplicaCountMedium: 1, ReplicaCountHigh: 2, ReplicaCountExtreme: 3}
+		if serviceID != "replication-group" || !reflect.DeepEqual(got, want) {
+			t.Errorf("mapping = %q, %#v; want %q, %#v", serviceID, got, "replication-group", want)
+		}
+	})
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			if !reflect.DeepEqual(testCase.got, testCase.want) {
-				t.Errorf("mapping = %#v, want %#v", testCase.got, testCase.want)
-			}
+	t.Run("valkey shards", func(t *testing.T) {
+		model := valkeyShardScalingResourceModel{
+			ServiceID: types.StringValue("replication-group"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
+			MinShardCount: &valkeyShardCountModel{Low: types.Int64Value(1), Medium: types.Int64Value(2), High: types.Int64Value(3), Extreme: types.Int64Value(4)},
+		}
+		serviceID, got := model.ToClientModel()
+		want := client.ValkeyShardScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4}
+		if serviceID != "replication-group" || !reflect.DeepEqual(got, want) {
+			t.Errorf("mapping = %q, %#v; want %q, %#v", serviceID, got, "replication-group", want)
+		}
+	})
+
+	t.Run("aurora readers", func(t *testing.T) {
+		model := auroraReaderScalingResourceModel{
+			ServiceID: types.StringValue("cluster"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
+			Capacity: &auroraReaderScalingCapacityModel{
+				Low: auroraReaderCapacityModel{MinReaders: types.Int64Value(1), MaxReaders: types.Int64Value(2)}, Medium: auroraReaderCapacityModel{MinReaders: types.Int64Value(2), MaxReaders: types.Int64Value(3)},
+				High: auroraReaderCapacityModel{MinReaders: types.Int64Value(3), MaxReaders: types.Int64Value(4)}, Extreme: auroraReaderCapacityModel{MinReaders: types.Int64Value(4), MaxReaders: types.Int64Value(5)},
+			},
+		}
+		serviceID, got := model.ToClientModel()
+		want := client.AuroraReaderScalingPostBody{
+			Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
+			LowCapacity: client.AuroraReaderCapacity{MinReaders: 1, MaxReaders: 2}, MediumCapacity: client.AuroraReaderCapacity{MinReaders: 2, MaxReaders: 3}, HighCapacity: client.AuroraReaderCapacity{MinReaders: 3, MaxReaders: 4}, ExtremeCapacity: client.AuroraReaderCapacity{MinReaders: 4, MaxReaders: 5},
+		}
+		if serviceID != "cluster" || !reflect.DeepEqual(got, want) {
+			t.Errorf("mapping = %q, %#v; want %q, %#v", serviceID, got, "cluster", want)
+		}
+	})
+}
+
+func TestValkeyAndAuroraToResourceModelMappings(t *testing.T) {
+	t.Run("valkey replicas", func(t *testing.T) {
+		got := ToValkeyReplicaScalingResourceModel(&client.ValkeyReplicaScalingResponse{
+			ServiceID: "replication-group", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, ReplicaCountLow: 0, ReplicaCountMedium: 1, ReplicaCountHigh: 2, ReplicaCountExtreme: 3,
 		})
-	}
+		want := valkeyReplicaScalingResourceModel{
+			ServiceID: types.StringValue("replication-group"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
+			ReplicaCount: &valkeyReplicaCountModel{Low: types.Int64Value(0), Medium: types.Int64Value(1), High: types.Int64Value(2), Extreme: types.Int64Value(3)},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mapping = %#v, want %#v", got, want)
+		}
+	})
+
+	t.Run("valkey shards", func(t *testing.T) {
+		got := ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{
+			ServiceID: "replication-group", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4,
+		})
+		want := valkeyShardScalingResourceModel{
+			ServiceID: types.StringValue("replication-group"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
+			MinShardCount: &valkeyShardCountModel{Low: types.Int64Value(1), Medium: types.Int64Value(2), High: types.Int64Value(3), Extreme: types.Int64Value(4)},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mapping = %#v, want %#v", got, want)
+		}
+	})
+
+	t.Run("aurora readers", func(t *testing.T) {
+		got := ToAuroraReaderScalingResourceModel(&client.AuroraReaderScalingResponse{
+			ServiceID: "cluster", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
+			LowCapacity: client.AuroraReaderCapacity{MinReaders: 1, MaxReaders: 2}, MediumCapacity: client.AuroraReaderCapacity{MinReaders: 2, MaxReaders: 3}, HighCapacity: client.AuroraReaderCapacity{MinReaders: 3, MaxReaders: 4}, ExtremeCapacity: client.AuroraReaderCapacity{MinReaders: 4, MaxReaders: 5},
+		})
+		want := auroraReaderScalingResourceModel{
+			ServiceID: types.StringValue("cluster"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
+			Capacity: &auroraReaderScalingCapacityModel{
+				Low: auroraReaderCapacityModel{MinReaders: types.Int64Value(1), MaxReaders: types.Int64Value(2)}, Medium: auroraReaderCapacityModel{MinReaders: types.Int64Value(2), MaxReaders: types.Int64Value(3)},
+				High: auroraReaderCapacityModel{MinReaders: types.Int64Value(3), MaxReaders: types.Int64Value(4)}, Extreme: auroraReaderCapacityModel{MinReaders: types.Int64Value(4), MaxReaders: types.Int64Value(5)},
+			},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mapping = %#v, want %#v", got, want)
+		}
+	})
 }
 
 func TestValkeyAndAuroraLeadTimeSchema(t *testing.T) {
@@ -159,21 +206,6 @@ func assertNoCapacityValidators(t *testing.T, attributes map[string]schema.Attri
 			}
 		}
 	}
-}
-
-func (m valkeyReplicaScalingResourceModel) ToClientModelBody() client.ValkeyReplicaScalingPostBody {
-	_, body := m.ToClientModel()
-	return body
-}
-
-func (m valkeyShardScalingResourceModel) ToClientModelBody() client.ValkeyShardScalingPostBody {
-	_, body := m.ToClientModel()
-	return body
-}
-
-func (m auroraReaderScalingResourceModel) ToClientModelBody() client.AuroraReaderScalingPostBody {
-	_, body := m.ToClientModel()
-	return body
 }
 
 type scalingResourceLifecycleTest struct {

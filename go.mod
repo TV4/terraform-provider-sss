@@ -2,7 +2,10 @@ module terraform-provider-sss
 
 go 1.25.3
 
-require github.com/hashicorp/terraform-plugin-framework v1.16.1
+require (
+	github.com/hashicorp/terraform-plugin-framework v1.16.1
+	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
+)
 
 require (
 	github.com/fatih/color v1.18.0 // indirect

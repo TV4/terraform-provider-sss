@@ -38,7 +38,7 @@ resource "sss_valkey_replica_scaling" "example" {
 
 ### Optional
 
-- `scale_up_lead_time_minutes` (Number) Minutes before a scheduled boundary to begin scale-up. Defaults to 0, which begins scaling at the boundary on the next service tick. Defaults to `0`.
+- `scale_up_lead_time_minutes` (Number) Minutes before a scheduled boundary to begin scale-up. Defaults to 0, which begins scaling at the boundary on the next service tick.
 
 ### Read-Only
 
@@ -57,6 +57,8 @@ Required:
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # Scaling can be imported by specifying the ElastiCache replication group identifier.

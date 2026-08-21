@@ -3,7 +3,7 @@
 page_title: "sss_aurora_reader_scaling Resource - sss"
 subcategory: ""
 description: |-
-  Manages scheduled reader scaling for an Aurora DB cluster.
+  Manages scheduled reader scaling for an Aurora DB cluster. API-enforced: SSS owns the RDS Application Auto Scaling target; the cluster must contain at least one reader; configured maximums should be at least the number of fixed readers.
 ---
 
 # sss_aurora_reader_scaling (Resource)
@@ -50,7 +50,7 @@ resource "sss_aurora_reader_scaling" "example" {
 
 ### Optional
 
-- `scale_up_lead_time_minutes` (Number) Minutes before a scheduled boundary to begin scale-up. Defaults to 0, which begins scaling at the boundary on the next service tick. Defaults to `0`.
+- `scale_up_lead_time_minutes` (Number) Minutes before a scheduled boundary to begin scale-up. Defaults to 0, which begins scaling at the boundary on the next service tick.
 
 ### Read-Only
 
@@ -74,6 +74,7 @@ Required:
 - `max_readers` (Number)
 - `min_readers` (Number)
 
+
 <a id="nestedatt--capacity--high"></a>
 ### Nested Schema for `capacity.high`
 
@@ -82,6 +83,7 @@ Required:
 - `max_readers` (Number)
 - `min_readers` (Number)
 
+
 <a id="nestedatt--capacity--low"></a>
 ### Nested Schema for `capacity.low`
 
@@ -89,6 +91,7 @@ Required:
 
 - `max_readers` (Number)
 - `min_readers` (Number)
+
 
 <a id="nestedatt--capacity--medium"></a>
 ### Nested Schema for `capacity.medium`
@@ -101,6 +104,8 @@ Required:
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # Scaling can be imported by specifying the Aurora DB cluster identifier.

@@ -3,12 +3,12 @@
 page_title: "sss_valkey_shard_scaling Resource - sss"
 subcategory: ""
 description: |-
-  Manages scheduled minimum shard scaling for an ElastiCache Valkey replication group.
+  Manages scheduled shard scaling for an ElastiCache Valkey replication group. API-enforced: infrastructure owns and creates the Application Auto Scaling target before SSS; SSS updates both runtime bounds; infrastructure must ignore drift for both MinCapacity and MaxCapacity.
 ---
 
 # sss_valkey_shard_scaling (Resource)
 
-Manages scheduled minimum shard scaling for an ElastiCache Valkey replication group.
+Manages scheduled shard scaling for an ElastiCache Valkey replication group. API-enforced: infrastructure owns and creates the Application Auto Scaling target before SSS; SSS updates both runtime bounds; infrastructure must ignore drift for both MinCapacity and MaxCapacity.
 
 ## Example Usage
 
@@ -18,11 +18,23 @@ resource "sss_valkey_shard_scaling" "example" {
   region                     = "eu-west-1"
   scale_up_lead_time_minutes = 15
 
-  min_shard_count = {
-    low     = 1
-    medium  = 2
-    high    = 3
-    extreme = 4
+  capacity = {
+    low = {
+      min_shard_count = 1
+      max_shard_count = 2
+    }
+    medium = {
+      min_shard_count = 2
+      max_shard_count = 3
+    }
+    high = {
+      min_shard_count = 3
+      max_shard_count = 4
+    }
+    extreme = {
+      min_shard_count = 4
+      max_shard_count = 5
+    }
   }
 }
 ```
@@ -32,7 +44,7 @@ resource "sss_valkey_shard_scaling" "example" {
 
 ### Required
 
-- `min_shard_count` (Attributes) Minimum shard counts for each schedule level. API-enforced: values must be greater than zero and low <= medium <= high <= extreme. The Application Auto Scaling target must already exist; SSS changes only its minimum capacity. Replica and shard resources may share a service_id. (see [below for nested schema](#nestedatt--min_shard_count))
+- `capacity` (Attributes) Shard capacity bounds for each schedule level. (see [below for nested schema](#nestedatt--capacity))
 - `region` (String) The AWS region containing the replication group.
 - `service_id` (String) The ElastiCache replication group identifier.
 
@@ -44,15 +56,50 @@ resource "sss_valkey_shard_scaling" "example" {
 
 - `last_updated` (String)
 
-<a id="nestedatt--min_shard_count"></a>
-### Nested Schema for `min_shard_count`
+<a id="nestedatt--capacity"></a>
+### Nested Schema for `capacity`
 
 Required:
 
-- `extreme` (Number)
-- `high` (Number)
-- `low` (Number)
-- `medium` (Number)
+- `extreme` (Attributes) Shard capacity for a schedule level. API-enforced: 1 <= min_shard_count <= max_shard_count, and minimums and maximums must each be monotonic across levels. (see [below for nested schema](#nestedatt--capacity--extreme))
+- `high` (Attributes) Shard capacity for a schedule level. API-enforced: 1 <= min_shard_count <= max_shard_count, and minimums and maximums must each be monotonic across levels. (see [below for nested schema](#nestedatt--capacity--high))
+- `low` (Attributes) Shard capacity for a schedule level. API-enforced: 1 <= min_shard_count <= max_shard_count, and minimums and maximums must each be monotonic across levels. (see [below for nested schema](#nestedatt--capacity--low))
+- `medium` (Attributes) Shard capacity for a schedule level. API-enforced: 1 <= min_shard_count <= max_shard_count, and minimums and maximums must each be monotonic across levels. (see [below for nested schema](#nestedatt--capacity--medium))
+
+<a id="nestedatt--capacity--extreme"></a>
+### Nested Schema for `capacity.extreme`
+
+Required:
+
+- `max_shard_count` (Number)
+- `min_shard_count` (Number)
+
+
+<a id="nestedatt--capacity--high"></a>
+### Nested Schema for `capacity.high`
+
+Required:
+
+- `max_shard_count` (Number)
+- `min_shard_count` (Number)
+
+
+<a id="nestedatt--capacity--low"></a>
+### Nested Schema for `capacity.low`
+
+Required:
+
+- `max_shard_count` (Number)
+- `min_shard_count` (Number)
+
+
+<a id="nestedatt--capacity--medium"></a>
+### Nested Schema for `capacity.medium`
+
+Required:
+
+- `max_shard_count` (Number)
+- `min_shard_count` (Number)
 
 ## Import
 

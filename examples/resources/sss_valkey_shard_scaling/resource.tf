@@ -3,10 +3,22 @@ resource "sss_valkey_shard_scaling" "example" {
   region                     = "eu-west-1"
   scale_up_lead_time_minutes = 15
 
-  min_shard_count = {
-    low     = 1
-    medium  = 2
-    high    = 3
-    extreme = 4
+  capacity = {
+    low = {
+      min_shard_count = 1
+      max_shard_count = 2
+    }
+    medium = {
+      min_shard_count = 2
+      max_shard_count = 3
+    }
+    high = {
+      min_shard_count = 3
+      max_shard_count = 4
+    }
+    extreme = {
+      min_shard_count = 4
+      max_shard_count = 5
+    }
   }
 }

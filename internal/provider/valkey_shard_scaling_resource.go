@@ -24,29 +24,46 @@ var (
 	_ resource.ResourceWithImportState = &valkeyShardScalingResource{}
 )
 
-type valkeyShardCountModel struct {
-	Low     types.Int64 `tfsdk:"low"`
-	Medium  types.Int64 `tfsdk:"medium"`
-	High    types.Int64 `tfsdk:"high"`
-	Extreme types.Int64 `tfsdk:"extreme"`
+type valkeyShardCapacityModel struct {
+	MinShardCount types.Int64 `tfsdk:"min_shard_count"`
+	MaxShardCount types.Int64 `tfsdk:"max_shard_count"`
+}
+
+type valkeyShardScalingCapacityModel struct {
+	Low     valkeyShardCapacityModel `tfsdk:"low"`
+	Medium  valkeyShardCapacityModel `tfsdk:"medium"`
+	High    valkeyShardCapacityModel `tfsdk:"high"`
+	Extreme valkeyShardCapacityModel `tfsdk:"extreme"`
 }
 
 type valkeyShardScalingResourceModel struct {
-	ServiceID              types.String           `tfsdk:"service_id"`
-	Region                 types.String           `tfsdk:"region"`
-	ScaleUpLeadTimeMinutes types.Int64            `tfsdk:"scale_up_lead_time_minutes"`
-	MinShardCount          *valkeyShardCountModel `tfsdk:"min_shard_count"`
-	LastUpdated            types.String           `tfsdk:"last_updated"`
+	ServiceID              types.String                     `tfsdk:"service_id"`
+	Region                 types.String                     `tfsdk:"region"`
+	ScaleUpLeadTimeMinutes types.Int64                      `tfsdk:"scale_up_lead_time_minutes"`
+	Capacity               *valkeyShardScalingCapacityModel `tfsdk:"capacity"`
+	LastUpdated            types.String                     `tfsdk:"last_updated"`
 }
 
 func (m *valkeyShardScalingResourceModel) ToClientModel() (string, client.ValkeyShardScalingPostBody) {
 	return m.ServiceID.ValueString(), client.ValkeyShardScalingPostBody{
 		Region:                 m.Region.ValueString(),
 		ScaleUpLeadTimeMinutes: m.ScaleUpLeadTimeMinutes.ValueInt64(),
-		MinShardCountLow:       m.MinShardCount.Low.ValueInt64(),
-		MinShardCountMedium:    m.MinShardCount.Medium.ValueInt64(),
-		MinShardCountHigh:      m.MinShardCount.High.ValueInt64(),
-		MinShardCountExtreme:   m.MinShardCount.Extreme.ValueInt64(),
+		LowCapacity: client.ValkeyShardCapacity{
+			MinShardCount: m.Capacity.Low.MinShardCount.ValueInt64(),
+			MaxShardCount: m.Capacity.Low.MaxShardCount.ValueInt64(),
+		},
+		MediumCapacity: client.ValkeyShardCapacity{
+			MinShardCount: m.Capacity.Medium.MinShardCount.ValueInt64(),
+			MaxShardCount: m.Capacity.Medium.MaxShardCount.ValueInt64(),
+		},
+		HighCapacity: client.ValkeyShardCapacity{
+			MinShardCount: m.Capacity.High.MinShardCount.ValueInt64(),
+			MaxShardCount: m.Capacity.High.MaxShardCount.ValueInt64(),
+		},
+		ExtremeCapacity: client.ValkeyShardCapacity{
+			MinShardCount: m.Capacity.Extreme.MinShardCount.ValueInt64(),
+			MaxShardCount: m.Capacity.Extreme.MaxShardCount.ValueInt64(),
+		},
 	}
 }
 
@@ -55,11 +72,23 @@ func ToValkeyShardScalingResourceModel(m *client.ValkeyShardScalingResponse) val
 		ServiceID:              types.StringValue(m.ServiceID),
 		Region:                 types.StringValue(m.Region),
 		ScaleUpLeadTimeMinutes: types.Int64Value(m.ScaleUpLeadTimeMinutes),
-		MinShardCount: &valkeyShardCountModel{
-			Low:     types.Int64Value(m.MinShardCountLow),
-			Medium:  types.Int64Value(m.MinShardCountMedium),
-			High:    types.Int64Value(m.MinShardCountHigh),
-			Extreme: types.Int64Value(m.MinShardCountExtreme),
+		Capacity: &valkeyShardScalingCapacityModel{
+			Low: valkeyShardCapacityModel{
+				MinShardCount: types.Int64Value(m.LowCapacity.MinShardCount),
+				MaxShardCount: types.Int64Value(m.LowCapacity.MaxShardCount),
+			},
+			Medium: valkeyShardCapacityModel{
+				MinShardCount: types.Int64Value(m.MediumCapacity.MinShardCount),
+				MaxShardCount: types.Int64Value(m.MediumCapacity.MaxShardCount),
+			},
+			High: valkeyShardCapacityModel{
+				MinShardCount: types.Int64Value(m.HighCapacity.MinShardCount),
+				MaxShardCount: types.Int64Value(m.HighCapacity.MaxShardCount),
+			},
+			Extreme: valkeyShardCapacityModel{
+				MinShardCount: types.Int64Value(m.ExtremeCapacity.MinShardCount),
+				MaxShardCount: types.Int64Value(m.ExtremeCapacity.MaxShardCount),
+			},
 		},
 	}
 }
@@ -90,8 +119,17 @@ func (r *valkeyShardScalingResource) Metadata(_ context.Context, req resource.Me
 }
 
 func (r *valkeyShardScalingResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	capacitySchema := schema.SingleNestedAttribute{
+		Description: "Shard capacity for a schedule level. API-enforced: 1 <= min_shard_count <= max_shard_count, and minimums and maximums must each be monotonic across levels.",
+		Required:    true,
+		Attributes: map[string]schema.Attribute{
+			"min_shard_count": schema.Int64Attribute{Required: true},
+			"max_shard_count": schema.Int64Attribute{Required: true},
+		},
+	}
+
 	resp.Schema = schema.Schema{
-		Description: "Manages scheduled minimum shard scaling for an ElastiCache Valkey replication group.",
+		Description: "Manages scheduled shard scaling for an ElastiCache Valkey replication group. API-enforced: infrastructure owns and creates the Application Auto Scaling target before SSS; SSS updates both runtime bounds; infrastructure must ignore drift for both MinCapacity and MaxCapacity.",
 		Attributes: map[string]schema.Attribute{
 			"service_id": schema.StringAttribute{
 				Description: "The ElastiCache replication group identifier.",
@@ -109,14 +147,14 @@ func (r *valkeyShardScalingResource) Schema(_ context.Context, _ resource.Schema
 				Validators:  []validator.Int64{int64validator.Between(0, 10080)},
 			},
 			"last_updated": schema.StringAttribute{Computed: true},
-			"min_shard_count": schema.SingleNestedAttribute{
-				Description: "Minimum shard counts for each schedule level. API-enforced: values must be greater than zero and low <= medium <= high <= extreme. The Application Auto Scaling target must already exist; SSS changes only its minimum capacity. Replica and shard resources may share a service_id.",
+			"capacity": schema.SingleNestedAttribute{
+				Description: "Shard capacity bounds for each schedule level.",
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
-					"low":     schema.Int64Attribute{Required: true},
-					"medium":  schema.Int64Attribute{Required: true},
-					"high":    schema.Int64Attribute{Required: true},
-					"extreme": schema.Int64Attribute{Required: true},
+					"low":     capacitySchema,
+					"medium":  capacitySchema,
+					"high":    capacitySchema,
+					"extreme": capacitySchema,
 				},
 			},
 		},

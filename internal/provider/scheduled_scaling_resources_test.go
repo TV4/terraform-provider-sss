@@ -39,10 +39,16 @@ func TestValkeyAndAuroraToClientModelMappings(t *testing.T) {
 	t.Run("valkey shards", func(t *testing.T) {
 		model := valkeyShardScalingResourceModel{
 			ServiceID: types.StringValue("replication-group"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
-			MinShardCount: &valkeyShardCountModel{Low: types.Int64Value(1), Medium: types.Int64Value(2), High: types.Int64Value(3), Extreme: types.Int64Value(4)},
+			Capacity: &valkeyShardScalingCapacityModel{
+				Low: valkeyShardCapacityModel{MinShardCount: types.Int64Value(11), MaxShardCount: types.Int64Value(12)}, Medium: valkeyShardCapacityModel{MinShardCount: types.Int64Value(21), MaxShardCount: types.Int64Value(22)},
+				High: valkeyShardCapacityModel{MinShardCount: types.Int64Value(31), MaxShardCount: types.Int64Value(32)}, Extreme: valkeyShardCapacityModel{MinShardCount: types.Int64Value(41), MaxShardCount: types.Int64Value(42)},
+			},
 		}
 		serviceID, got := model.ToClientModel()
-		want := client.ValkeyShardScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4}
+		want := client.ValkeyShardScalingPostBody{
+			Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
+			LowCapacity: client.ValkeyShardCapacity{MinShardCount: 11, MaxShardCount: 12}, MediumCapacity: client.ValkeyShardCapacity{MinShardCount: 21, MaxShardCount: 22}, HighCapacity: client.ValkeyShardCapacity{MinShardCount: 31, MaxShardCount: 32}, ExtremeCapacity: client.ValkeyShardCapacity{MinShardCount: 41, MaxShardCount: 42},
+		}
 		if serviceID != "replication-group" || !reflect.DeepEqual(got, want) {
 			t.Errorf("mapping = %q, %#v; want %q, %#v", serviceID, got, "replication-group", want)
 		}
@@ -83,11 +89,15 @@ func TestValkeyAndAuroraToResourceModelMappings(t *testing.T) {
 
 	t.Run("valkey shards", func(t *testing.T) {
 		got := ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{
-			ServiceID: "replication-group", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4,
+			ServiceID: "replication-group", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
+			LowCapacity: client.ValkeyShardCapacity{MinShardCount: 11, MaxShardCount: 12}, MediumCapacity: client.ValkeyShardCapacity{MinShardCount: 21, MaxShardCount: 22}, HighCapacity: client.ValkeyShardCapacity{MinShardCount: 31, MaxShardCount: 32}, ExtremeCapacity: client.ValkeyShardCapacity{MinShardCount: 41, MaxShardCount: 42},
 		})
 		want := valkeyShardScalingResourceModel{
 			ServiceID: types.StringValue("replication-group"), Region: types.StringValue("eu-west-1"), ScaleUpLeadTimeMinutes: types.Int64Value(60),
-			MinShardCount: &valkeyShardCountModel{Low: types.Int64Value(1), Medium: types.Int64Value(2), High: types.Int64Value(3), Extreme: types.Int64Value(4)},
+			Capacity: &valkeyShardScalingCapacityModel{
+				Low: valkeyShardCapacityModel{MinShardCount: types.Int64Value(11), MaxShardCount: types.Int64Value(12)}, Medium: valkeyShardCapacityModel{MinShardCount: types.Int64Value(21), MaxShardCount: types.Int64Value(22)},
+				High: valkeyShardCapacityModel{MinShardCount: types.Int64Value(31), MaxShardCount: types.Int64Value(32)}, Extreme: valkeyShardCapacityModel{MinShardCount: types.Int64Value(41), MaxShardCount: types.Int64Value(42)},
+			},
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("mapping = %#v, want %#v", got, want)
@@ -162,9 +172,40 @@ func TestValkeyAndAuroraLeadTimeSchema(t *testing.T) {
 	}
 }
 
+func TestValkeyShardCapacitySchema(t *testing.T) {
+	var schemaResponse resource.SchemaResponse
+	NewValkeyShardScalingResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResponse)
+
+	if _, exists := schemaResponse.Schema.Attributes["min_shard_count"]; exists {
+		t.Error("legacy min_shard_count attribute is present")
+	}
+	capacity, ok := schemaResponse.Schema.Attributes["capacity"].(schema.SingleNestedAttribute)
+	if !ok || !capacity.Required {
+		t.Fatal("capacity is not a required nested attribute")
+	}
+	for _, level := range []string{"low", "medium", "high", "extreme"} {
+		levelCapacity, ok := capacity.Attributes[level].(schema.SingleNestedAttribute)
+		if !ok || !levelCapacity.Required {
+			t.Fatalf("capacity.%s is not a required nested attribute", level)
+		}
+		if len(levelCapacity.Attributes) != 2 {
+			t.Fatalf("capacity.%s field count = %d, want 2", level, len(levelCapacity.Attributes))
+		}
+		for _, field := range []string{"min_shard_count", "max_shard_count"} {
+			bound, ok := levelCapacity.Attributes[field].(schema.Int64Attribute)
+			if !ok || !bound.Required {
+				t.Errorf("capacity.%s.%s is not a required Int64 attribute", level, field)
+			}
+			if len(bound.Validators) != 0 {
+				t.Errorf("capacity.%s.%s has capacity validation", level, field)
+			}
+		}
+	}
+}
+
 func assertNoCapacityValidators(t *testing.T, attributes map[string]schema.Attribute) {
 	t.Helper()
-	for _, name := range []string{"replica_count", "min_shard_count"} {
+	for _, name := range []string{"replica_count"} {
 		if attribute, exists := attributes[name]; exists {
 			nested, ok := attribute.(schema.SingleNestedAttribute)
 			if !ok {
@@ -388,13 +429,13 @@ func scalingResourceLifecycleTests() []scalingResourceLifecycleTest {
 				configured.client = c
 			},
 			partialState: valkeyShardScalingResourceModel{ServiceID: types.StringNull(), Region: types.StringNull(), ScaleUpLeadTimeMinutes: types.Int64Null(), LastUpdated: types.StringNull()},
-			response:     `{"serviceId":"service","region":"eu-west-1","scaleUpLeadTimeMinutes":60,"minShardCountLow":1,"minShardCountMedium":2,"minShardCountHigh":3,"minShardCountExtreme":4}`,
+			response:     `{"serviceId":"service","region":"eu-west-1","scaleUpLeadTimeMinutes":60,"lowCapacity":{"minShardCount":1,"maxShardCount":2},"mediumCapacity":{"minShardCount":2,"maxShardCount":3},"highCapacity":{"minShardCount":3,"maxShardCount":4},"extremeCapacity":{"minShardCount":4,"maxShardCount":5}}`,
 			assertState: func(t *testing.T, state tfsdk.State) {
 				var got valkeyShardScalingResourceModel
 				if diags := state.Get(context.Background(), &got); diags.HasError() {
 					t.Fatalf("get state: %v", diags)
 				}
-				want := ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{ServiceID: "service", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4})
+				want := ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{ServiceID: "service", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, LowCapacity: client.ValkeyShardCapacity{MinShardCount: 1, MaxShardCount: 2}, MediumCapacity: client.ValkeyShardCapacity{MinShardCount: 2, MaxShardCount: 3}, HighCapacity: client.ValkeyShardCapacity{MinShardCount: 3, MaxShardCount: 4}, ExtremeCapacity: client.ValkeyShardCapacity{MinShardCount: 4, MaxShardCount: 5}})
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("state = %#v, want %#v", got, want)
 				}
@@ -446,7 +487,7 @@ func testCaseStateModel(testCase scalingResourceLifecycleTest) any {
 	case "valkey replicas":
 		return ToValkeyReplicaScalingResourceModel(&client.ValkeyReplicaScalingResponse{ServiceID: "service", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, ReplicaCountLow: 0, ReplicaCountMedium: 1, ReplicaCountHigh: 2, ReplicaCountExtreme: 3})
 	case "valkey shards":
-		return ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{ServiceID: "service", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4})
+		return ToValkeyShardScalingResourceModel(&client.ValkeyShardScalingResponse{ServiceID: "service", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, LowCapacity: client.ValkeyShardCapacity{MinShardCount: 1, MaxShardCount: 2}, MediumCapacity: client.ValkeyShardCapacity{MinShardCount: 2, MaxShardCount: 3}, HighCapacity: client.ValkeyShardCapacity{MinShardCount: 3, MaxShardCount: 4}, ExtremeCapacity: client.ValkeyShardCapacity{MinShardCount: 4, MaxShardCount: 5}})
 	default:
 		return ToAuroraReaderScalingResourceModel(&client.AuroraReaderScalingResponse{ServiceID: "service", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, LowCapacity: client.AuroraReaderCapacity{MinReaders: 1, MaxReaders: 2}, MediumCapacity: client.AuroraReaderCapacity{MinReaders: 2, MaxReaders: 3}, HighCapacity: client.AuroraReaderCapacity{MinReaders: 3, MaxReaders: 4}, ExtremeCapacity: client.AuroraReaderCapacity{MinReaders: 4, MaxReaders: 5}})
 	}

@@ -88,23 +88,28 @@ type ValkeyReplicaScalingResponse struct {
 	ReplicaCountExtreme    int64  `json:"replicaCountExtreme"`
 }
 
+type ValkeyShardCapacity struct {
+	MinShardCount int64 `json:"minShardCount"`
+	MaxShardCount int64 `json:"maxShardCount"`
+}
+
 type ValkeyShardScalingPostBody struct {
-	Region                 string `json:"region"`
-	ScaleUpLeadTimeMinutes int64  `json:"scaleUpLeadTimeMinutes"`
-	MinShardCountLow       int64  `json:"minShardCountLow"`
-	MinShardCountMedium    int64  `json:"minShardCountMedium"`
-	MinShardCountHigh      int64  `json:"minShardCountHigh"`
-	MinShardCountExtreme   int64  `json:"minShardCountExtreme"`
+	Region                 string              `json:"region"`
+	ScaleUpLeadTimeMinutes int64               `json:"scaleUpLeadTimeMinutes"`
+	LowCapacity            ValkeyShardCapacity `json:"lowCapacity"`
+	MediumCapacity         ValkeyShardCapacity `json:"mediumCapacity"`
+	HighCapacity           ValkeyShardCapacity `json:"highCapacity"`
+	ExtremeCapacity        ValkeyShardCapacity `json:"extremeCapacity"`
 }
 
 type ValkeyShardScalingResponse struct {
-	ServiceID              string `json:"serviceId"`
-	Region                 string `json:"region"`
-	ScaleUpLeadTimeMinutes int64  `json:"scaleUpLeadTimeMinutes"`
-	MinShardCountLow       int64  `json:"minShardCountLow"`
-	MinShardCountMedium    int64  `json:"minShardCountMedium"`
-	MinShardCountHigh      int64  `json:"minShardCountHigh"`
-	MinShardCountExtreme   int64  `json:"minShardCountExtreme"`
+	ServiceID              string              `json:"serviceId"`
+	Region                 string              `json:"region"`
+	ScaleUpLeadTimeMinutes int64               `json:"scaleUpLeadTimeMinutes"`
+	LowCapacity            ValkeyShardCapacity `json:"lowCapacity"`
+	MediumCapacity         ValkeyShardCapacity `json:"mediumCapacity"`
+	HighCapacity           ValkeyShardCapacity `json:"highCapacity"`
+	ExtremeCapacity        ValkeyShardCapacity `json:"extremeCapacity"`
 }
 
 type AuroraReaderCapacity struct {

@@ -166,19 +166,19 @@ func scheduledScalingEndpointTests() []scheduledScalingEndpointTest {
 			name: "valkey shards",
 			path: "/api/v1/services/valkey-shards",
 			body: map[string]any{
-				"region": "eu-west-1", "scaleUpLeadTimeMinutes": float64(60), "minShardCountLow": float64(1), "minShardCountMedium": float64(2), "minShardCountHigh": float64(3), "minShardCountExtreme": float64(4),
+				"region": "eu-west-1", "scaleUpLeadTimeMinutes": float64(60),
+				"lowCapacity": map[string]any{"minShardCount": float64(11), "maxShardCount": float64(12)}, "mediumCapacity": map[string]any{"minShardCount": float64(21), "maxShardCount": float64(22)}, "highCapacity": map[string]any{"minShardCount": float64(31), "maxShardCount": float64(32)}, "extremeCapacity": map[string]any{"minShardCount": float64(41), "maxShardCount": float64(42)},
 			},
-			getResponse: `{"serviceId":"group/name with space","region":"eu-west-1","scaleUpLeadTimeMinutes":60,"minShardCountLow":1,"minShardCountMedium":2,"minShardCountHigh":3,"minShardCountExtreme":4,"$schema":"ignored"}`,
-			wantGet:     &ValkeyShardScalingResponse{ServiceID: "group/name with space", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4},
+			getResponse: `{"serviceId":"group/name with space","region":"eu-west-1","scaleUpLeadTimeMinutes":60,"lowCapacity":{"minShardCount":11,"maxShardCount":12},"mediumCapacity":{"minShardCount":21,"maxShardCount":22},"highCapacity":{"minShardCount":31,"maxShardCount":32},"extremeCapacity":{"minShardCount":41,"maxShardCount":42},"$schema":"ignored"}`,
+			wantGet: &ValkeyShardScalingResponse{
+				ServiceID: "group/name with space", Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
+				LowCapacity: ValkeyShardCapacity{MinShardCount: 11, MaxShardCount: 12}, MediumCapacity: ValkeyShardCapacity{MinShardCount: 21, MaxShardCount: 22}, HighCapacity: ValkeyShardCapacity{MinShardCount: 31, MaxShardCount: 32}, ExtremeCapacity: ValkeyShardCapacity{MinShardCount: 41, MaxShardCount: 42},
+			},
 			get: func(c *SssClient, id string) (any, error) {
 				return c.GetValkeyShardScaling(id)
 			},
-			create: func(c *SssClient, id string) error {
-				return c.CreateValkeyShardScaling(id, ValkeyShardScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4})
-			},
-			update: func(c *SssClient, id string) error {
-				return c.UpdateValkeyShardScaling(id, ValkeyShardScalingPostBody{Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60, MinShardCountLow: 1, MinShardCountMedium: 2, MinShardCountHigh: 3, MinShardCountExtreme: 4})
-			},
+			create: func(c *SssClient, id string) error { return c.CreateValkeyShardScaling(id, valkeyShardTestBody()) },
+			update: func(c *SssClient, id string) error { return c.UpdateValkeyShardScaling(id, valkeyShardTestBody()) },
 			delete: func(c *SssClient, id string) error { return c.DeleteValkeyShardScaling(id) },
 		},
 		{
@@ -200,6 +200,13 @@ func scheduledScalingEndpointTests() []scheduledScalingEndpointTest {
 			update: func(c *SssClient, id string) error { return c.UpdateAuroraReaderScaling(id, auroraReaderTestBody()) },
 			delete: func(c *SssClient, id string) error { return c.DeleteAuroraReaderScaling(id) },
 		},
+	}
+}
+
+func valkeyShardTestBody() ValkeyShardScalingPostBody {
+	return ValkeyShardScalingPostBody{
+		Region: "eu-west-1", ScaleUpLeadTimeMinutes: 60,
+		LowCapacity: ValkeyShardCapacity{MinShardCount: 11, MaxShardCount: 12}, MediumCapacity: ValkeyShardCapacity{MinShardCount: 21, MaxShardCount: 22}, HighCapacity: ValkeyShardCapacity{MinShardCount: 31, MaxShardCount: 32}, ExtremeCapacity: ValkeyShardCapacity{MinShardCount: 41, MaxShardCount: 42},
 	}
 }
 

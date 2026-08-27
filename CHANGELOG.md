@@ -1,3 +1,9 @@
+## 1.4.0
+
+FEATURES:
+- Add scheduled scaling resources for ElastiCache Valkey replicas and shards.
+- Add scheduled reader scaling resource for Aurora DB clusters.
+
 ## 1.2.3
 
 SECURITY UPDATES:

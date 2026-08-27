@@ -94,6 +94,9 @@ func (p *SssProvider) Resources(ctx context.Context) []func() resource.Resource 
 		NewEcsScalingResource,
 		NewDynamoTableScalingResource,
 		NewEksHpaScalingResource,
+		NewValkeyReplicaScalingResource,
+		NewValkeyShardScalingResource,
+		NewAuroraReaderScalingResource,
 	}
 }
 

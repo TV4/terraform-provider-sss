@@ -37,4 +37,4 @@ go test ./internal/provider -run '^TestAccEcsScalingPacedScaleUp$' -count=1 -v
 Set credentials in the shell or secret manager; do not put credentials in source
 control or command logs. The test only calls SSS and does not independently
 verify AWS-side fixture health. It requires the SSS deployment containing the
-ECS scale-out API fields. Live acceptance has not been run in the sandbox.
+ECS scale-out API fields.

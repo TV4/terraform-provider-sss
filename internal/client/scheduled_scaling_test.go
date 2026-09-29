@@ -32,8 +32,13 @@ func TestScheduledScalingClientRequests(t *testing.T) {
 	for _, endpoint := range endpoints {
 		t.Run(endpoint.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if got, want := r.URL.EscapedPath(), endpoint.path+"/group%2Fname%20with%20space"; got != want {
-					t.Errorf("path = %q, want %q", got, want)
+				wantPath := endpoint.path + "/group%2Fname%20with%20space"
+				if endpoint.name == "ecs" {
+					// Keep the ECS client's existing path escaping behavior unchanged.
+					wantPath = endpoint.path + "/group%252Fname%2520with%2520space"
+				}
+				if got := r.URL.EscapedPath(); got != wantPath {
+					t.Errorf("path = %q, want %q", got, wantPath)
 				}
 				username, password, ok := r.BasicAuth()
 				if !ok || username != "user" || password != "pass" {
@@ -92,6 +97,11 @@ func TestScheduledScalingClientRequests(t *testing.T) {
 
 func TestScheduledScalingClient422Errors(t *testing.T) {
 	for _, endpoint := range scheduledScalingEndpointTests() {
+		if endpoint.name == "ecs" {
+			// ECS keeps its existing status-only error handling; this test covers
+			// the newer scheduled-scaling clients that parse structured details.
+			continue
+		}
 		t.Run(endpoint.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/problem+json")
@@ -143,6 +153,30 @@ func testSssClient(server *httptest.Server) *SssClient {
 
 func scheduledScalingEndpointTests() []scheduledScalingEndpointTest {
 	return []scheduledScalingEndpointTest{
+		{
+			name: "ecs",
+			path: "/api/v1/services/ecs",
+			body: map[string]any{
+				"region": "eu-west-1", "minLowCapacity": float64(4), "minMediumCapacity": float64(10), "minHighCapacity": float64(18), "minExtremeCapacity": float64(18),
+				"scaleUpTasksPerMinute": float64(2), "scaleUpLeadTimeMinutes": float64(7),
+			},
+			getResponse: `{"Name":"group/name with space","Region":"eu-west-1","MinLowCapacity":4,"MinMediumCapacity":10,"MinHighCapacity":18,"MinExtremeCapacity":18,"ScaleUpTasksPerMinute":2,"ScaleUpLeadTimeMinutes":7}`,
+			wantGet: &EcsServiceResponse{
+				Name: "group/name with space", Region: "eu-west-1", MinLowCapacity: 4, MinMediumCapacity: 10, MinHighCapacity: 18, MinExtremeCapacity: 18,
+				ScaleUpTasksPerMinute: 2, ScaleUpLeadTimeMinutes: 7,
+			},
+			get: func(c *SssClient, id string) (any, error) { return c.GetEcsService(id) },
+			create: func(c *SssClient, id string) error {
+				return c.CreateEcsService(id, EcsServicePostBody{Region: "eu-west-1", MinLowCapacity: 4, MinMediumCapacity: 10, MinHighCapacity: 18, MinExtremeCapacity: 18, ScaleUpTasksPerMinute: 2, ScaleUpLeadTimeMinutes: 7})
+			},
+			update: func(c *SssClient, id string) error {
+				return c.UpdateEcsService(id, EcsServicePostBody{Region: "eu-west-1", MinLowCapacity: 4, MinMediumCapacity: 10, MinHighCapacity: 18, MinExtremeCapacity: 18, ScaleUpTasksPerMinute: 2, ScaleUpLeadTimeMinutes: 7})
+			},
+			delete: func(c *SssClient, id string) error {
+				_, err := c.DeleteEcsService(id)
+				return err
+			},
+		},
 		{
 			name: "valkey replicas",
 			path: "/api/v1/services/valkey-replicas",
@@ -200,6 +234,50 @@ func scheduledScalingEndpointTests() []scheduledScalingEndpointTest {
 			update: func(c *SssClient, id string) error { return c.UpdateAuroraReaderScaling(id, auroraReaderTestBody()) },
 			delete: func(c *SssClient, id string) error { return c.DeleteAuroraReaderScaling(id) },
 		},
+	}
+}
+
+func TestEcsClientWritesExplicitZeroScaleUpFieldsAndReadsLegacyResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost, http.MethodPut:
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Errorf("decode request body: %v", err)
+				return
+			}
+			for _, field := range []string{"scaleUpTasksPerMinute", "scaleUpLeadTimeMinutes"} {
+				value, exists := body[field]
+				if !exists || value != float64(0) {
+					t.Errorf("%s = %#v (present %t), want explicit zero", field, value, exists)
+				}
+			}
+			if r.Method == http.MethodPost {
+				w.WriteHeader(http.StatusCreated)
+			}
+		case http.MethodGet:
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"Name":"service","Region":"eu-west-1","MinLowCapacity":1,"MinMediumCapacity":2,"MinHighCapacity":3,"MinExtremeCapacity":4}`))
+		default:
+			t.Errorf("unexpected method %q", r.Method)
+		}
+	}))
+	defer server.Close()
+
+	client := testSssClient(server)
+	body := EcsServicePostBody{Region: "eu-west-1", MinLowCapacity: 1, MinMediumCapacity: 2, MinHighCapacity: 3, MinExtremeCapacity: 4}
+	if err := client.CreateEcsService("service", body); err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	if err := client.UpdateEcsService("service", body); err != nil {
+		t.Fatalf("PUT: %v", err)
+	}
+	response, err := client.GetEcsService("service")
+	if err != nil {
+		t.Fatalf("GET: %v", err)
+	}
+	if response.ScaleUpTasksPerMinute != 0 || response.ScaleUpLeadTimeMinutes != 0 {
+		t.Errorf("legacy response scale-up values = %d/%d, want 0/0", response.ScaleUpTasksPerMinute, response.ScaleUpLeadTimeMinutes)
 	}
 }
 

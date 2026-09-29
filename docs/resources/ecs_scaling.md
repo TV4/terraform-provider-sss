@@ -3,25 +3,41 @@
 page_title: "sss_ecs_scaling Resource - sss"
 subcategory: ""
 description: |-
-  Manages scaling for ECS services.
+  Manages scheduled minimum task capacity for ECS services. SSS applies configured capacities to Application Auto Scaling MinCapacity; schedules are configured separately.
+  A nonzero scale_up_tasks_per_minute paces scheduled increases. For a settled increase from 4 to 18 at a rate of 2 tasks per minute, the increase takes seven minutes. A lead time of 7 starts that ramp seven minutes before the schedule boundary; a shorter lead does not accelerate it. Lead time alone advances the selected capacity as a jump. During its look-ahead window SSS selects the highest capacity, so short down/up cycles can retain the higher minimum.
+  SSS recalculates using elapsed time every 20 seconds. Missed ticks or restarts can cause catch-up jumps, and decreases in the computed minimum are not ramped. Pacing does not guarantee task readiness or actual task start times and does not limit deployments or independent autoscaling.
+  Both settings default to zero and zero disables each setting, preserving legacy behavior. If either setting is nonzero, SSS requires all four capacities to be non-negative; for a positive rate, the spread between the highest and lowest configured capacities must take no more than 120 minutes at that rate. Capacities need not be monotonic. These cross-field rules are API-enforced before writes; invalid requests return HTTP 422.
+  Updates use PUT, which replaces the configuration: removing either setting resets it to zero while retaining the other configured value. Older providers omit both fields and therefore reset both on update. Configure imported nonzero values to retain them.
 ---
 
 # sss_ecs_scaling (Resource)
 
-Manages scaling for ECS services.
+Manages scheduled minimum task capacity for ECS services. SSS applies configured capacities to Application Auto Scaling MinCapacity; schedules are configured separately.
+
+A nonzero scale_up_tasks_per_minute paces scheduled increases. For a settled increase from 4 to 18 at a rate of 2 tasks per minute, the increase takes seven minutes. A lead time of 7 starts that ramp seven minutes before the schedule boundary; a shorter lead does not accelerate it. Lead time alone advances the selected capacity as a jump. During its look-ahead window SSS selects the highest capacity, so short down/up cycles can retain the higher minimum.
+
+SSS recalculates using elapsed time every 20 seconds. Missed ticks or restarts can cause catch-up jumps, and decreases in the computed minimum are not ramped. Pacing does not guarantee task readiness or actual task start times and does not limit deployments or independent autoscaling.
+
+Both settings default to zero and zero disables each setting, preserving legacy behavior. If either setting is nonzero, SSS requires all four capacities to be non-negative; for a positive rate, the spread between the highest and lowest configured capacities must take no more than 120 minutes at that rate. Capacities need not be monotonic. These cross-field rules are API-enforced before writes; invalid requests return HTTP 422.
+
+Updates use PUT, which replaces the configuration: removing either setting resets it to zero while retaining the other configured value. Older providers omit both fields and therefore reset both on update. Configure imported nonzero values to retain them.
 
 ## Example Usage
 
 ```terraform
-resource "sss_ecs_scaling" "test" {
-  service_id = "service/coreecs-general-cluster-fargate-main-ew1/corecwbatcher-general-app"
+resource "sss_ecs_scaling" "example" {
+  service_id = "service/example-cluster/example-service"
   region     = "eu-west-1"
+
   min_tasks = {
-    low     = 3
-    medium  = 4
-    high    = 5
-    extreme = 6
+    low     = 4
+    medium  = 10
+    high    = 18
+    extreme = 18
   }
+
+  scale_up_tasks_per_minute  = 2
+  scale_up_lead_time_minutes = 7
 }
 ```
 
@@ -33,6 +49,11 @@ resource "sss_ecs_scaling" "test" {
 - `min_tasks` (Attributes) The minimum number of tasks to have during different schedules. (see [below for nested schema](#nestedatt--min_tasks))
 - `region` (String) The AWS region the service is located in. E.g. eu-west-1
 - `service_id` (String) The service ID. Should be in format CLUSTER_NAME/SERICE_NAME
+
+### Optional
+
+- `scale_up_lead_time_minutes` (Number) Minutes ahead of a scheduled boundary to select the highest capacity in the look-ahead window. Defaults to 0, which disables advance scaling; valid range is 0..10080. This advances a ramp but does not accelerate it; with no pacing, the higher minimum is applied as a jump. Short down/up cycles may retain the higher minimum.
+- `scale_up_tasks_per_minute` (Number) Maximum rate of scheduled minimum-capacity increases, in tasks per minute. Defaults to 0, which disables pacing. Must be non-negative. When positive, the spread across all four configured capacities must take no more than 120 minutes at this rate; SSS enforces this and conditional non-negative capacities through HTTP 422.
 
 ### Read-Only
 

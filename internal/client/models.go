@@ -4,20 +4,27 @@
 package client
 
 type EcsServicePostBody struct {
-	MinExtremeCapacity int64  `json:"minExtremeCapacity"`
-	MinHighCapacity    int64  `json:"minHighCapacity"`
-	MinMediumCapacity  int64  `json:"minMediumCapacity"`
-	MinLowCapacity     int64  `json:"minLowCapacity"`
-	Region             string `json:"region"`
+	MinExtremeCapacity     int64  `json:"minExtremeCapacity"`
+	MinHighCapacity        int64  `json:"minHighCapacity"`
+	MinMediumCapacity      int64  `json:"minMediumCapacity"`
+	MinLowCapacity         int64  `json:"minLowCapacity"`
+	ScaleUpTasksPerMinute  int64  `json:"scaleUpTasksPerMinute"`
+	ScaleUpLeadTimeMinutes int64  `json:"scaleUpLeadTimeMinutes"`
+	Region                 string `json:"region"`
 }
 
+// EcsServiceResponse uses camelCase JSON tags consistently with the client models.
+// The API emits legacy PascalCase GET fields because its response embeds an
+// untagged Go struct; encoding/json's case-insensitive matching decodes them.
 type EcsServiceResponse struct {
-	Name               string `json:"name"`
-	MinExtremeCapacity int64  `json:"minExtremeCapacity"`
-	MinHighCapacity    int64  `json:"minHighCapacity"`
-	MinMediumCapacity  int64  `json:"minMediumCapacity"`
-	MinLowCapacity     int64  `json:"minLowCapacity"`
-	Region             string `json:"region"`
+	Name                   string `json:"name"`
+	MinExtremeCapacity     int64  `json:"minExtremeCapacity"`
+	MinHighCapacity        int64  `json:"minHighCapacity"`
+	MinMediumCapacity      int64  `json:"minMediumCapacity"`
+	MinLowCapacity         int64  `json:"minLowCapacity"`
+	ScaleUpTasksPerMinute  int64  `json:"scaleUpTasksPerMinute"`
+	ScaleUpLeadTimeMinutes int64  `json:"scaleUpLeadTimeMinutes"`
+	Region                 string `json:"region"`
 }
 
 type DynamoTableCapacity struct {

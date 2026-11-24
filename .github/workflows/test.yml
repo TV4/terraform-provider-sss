@@ -16,12 +16,21 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    uses: TV4/actions/.github/workflows/go-lint.yml@go-lint/v3
+    secrets:
+      ORG_PAT_REPO_READ: ${{ github.token }}
+
   # Ensure project builds before running testing matrix
   build:
     name: Build
+    needs: lint
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Require successful lint
+        run: test "${{ needs.lint.result }}" = success
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
@@ -29,10 +38,6 @@ jobs:
           cache: true
       - run: go mod download
       - run: go build -v .
-      - name: Run linters
-        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9
-        with:
-          version: latest
 
   generate:
     runs-on: ubuntu-latest
